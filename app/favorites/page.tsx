@@ -2,15 +2,46 @@
 import GifCard from "@/components/GifCard";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/footer";
+import { useAuthContext } from "@/context/AuthContextProvider";
 import { useUser } from "@/context/UserProvider";
+import { getFavorites } from "@/lib/actions/user.actions";
 import { RefreshCcw } from "lucide-react";
 import Image from "next/image";
-import React from "react";
-
+import { useRouter } from "next/navigation";
+import React, { useEffect } from "react";
+import toast from "react-hot-toast";
+interface User {
+  userId: string;
+  gifs: string[];
+}
 const page = () => {
-  const { currentUser } = useUser() || {};
+  const { currentUser, setCurrentUser } = useUser() || {};
   const gifs = currentUser?.gifs;
   const [loading, setLoading] = React.useState(false);
+  const { user } = useAuthContext() || {};
+  const router = useRouter();
+
+  const getGif = async () => {
+    try {
+      getFavorites(user?.uid!).then((gifs) => {
+        setCurrentUser((currentUser: User | null) => ({
+          ...currentUser!,
+          gifs: gifs || [],
+        }));
+        setLoading(false);
+      });
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) {
+      router.push("/sign-in");
+    } else {
+      getGif();
+    }
+  }, [user]);
 
   return (
     <>

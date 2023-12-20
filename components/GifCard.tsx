@@ -1,15 +1,24 @@
 "use client";
 
 import { useAuthContext } from "@/context/AuthContextProvider";
+import { useUser } from "@/context/UserProvider";
 import {
   addToFavorites,
+  getFavorites,
   removeFromFavorites,
 } from "@/lib/actions/user.actions";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+
+interface User {
+  userId: string;
+  gifs: string[];
+}
+
 const GifCard = ({ gif, isFav }: { gif: string; isFav?: boolean }) => {
   const [fav, setFav] = useState(false);
   const { user } = useAuthContext() || {};
+  const { currentUser, setCurrentUser } = useUser() || {};
 
   useEffect(() => {
     if (isFav) setFav(isFav as boolean);
@@ -17,13 +26,29 @@ const GifCard = ({ gif, isFav }: { gif: string; isFav?: boolean }) => {
 
   const handleAddToFav = async () => {
     if (isFav) {
-      await removeFromFavorites(user?.uid as string, gif);
-      setFav(!fav);
-      toast.success("Removed from favorites");
+      try {
+        await removeFromFavorites(user?.uid as string, gif);
+        await getFavorites(user?.uid as string).then((gifs) => {
+          setCurrentUser((currentUser: User | null) => ({
+            ...currentUser!,
+            gifs: gifs || [],
+          }));
+        });
+        setFav(!fav);
+        toast.success("Removed from favorites");
+      } catch (error: any) {
+        toast.error(error.message);
+      }
     } else {
       setFav(!fav);
       try {
         await addToFavorites(user?.uid as string, gif);
+        await getFavorites(user?.uid as string).then((gifs) => {
+          setCurrentUser((currentUser: User | null) => ({
+            ...currentUser!,
+            gifs: gifs || [],
+          }));
+        });
         toast.success("Added to favorites");
       } catch (error: any) {
         toast.error(error.message);
